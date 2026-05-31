@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranger le bon ordre</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0ece4;
+    --surface: #fffdf8;
+    --border: #d6d0c4;
+    --text: #2a2520;
+    --muted: #9a9288;
+    --green: #3aaa6e;
+    --red-err: #e04848;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 32px;
+    gap: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none
+  }
+
+  header {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #level-title { font-size: 18px; font-weight: 800; }
+
+  #dots { display: flex; gap: 6px; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .dot.active { background: var(--green); }
+  .dot.done { background: #8bcfaa; }
+
+  #shelf-zone {
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .shelf-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  .ranger-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 4px;
+  }
+
+  .ranger-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .slots-row { display: flex; gap: 8px; }
+
+  .slot {
+    flex: 1;
+    aspect-ratio: 1;
+    max-width: 70px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.15s;
+    background: transparent;
+  }
+  .slot.filled { border-style: solid; border-color: transparent; }
+  .slot.highlight { border-color: var(--green) !important; background: #eaf8f1 !important; }
+  .slot.error { border-color: var(--red-err) !important; background: #fdeaea !important; }
+
+  .ball {
+    width: 70%; height: 70%;
+    border-radius: 8px;
+    pointer-events: none;
+    transition: transform 0.12s;
+  }
+  .slot.filled:active .ball { transform: scale(0.92); }
+
+  #hand-zone {
+    width: 100%; max-width: 480px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 56px;
+  }
+
+  .hand-lbl { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+  #held-display {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    display: none;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    transition: transform 0.12s;
+  }
+  #held-display.show { display: block; }
+  #held-display:active { transform: scale(0.9); }
+
+  #held-none { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  #tray-zone {
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    min-height: 90px;
+    align-items: center;
+  }
+
+  .tray-ball {
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.08);
+    transition: transform 0.12s, opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .tray-ball:active { transform: scale(0.9); }
+  .tray-ball.picked { opacity: 0.35; pointer-events: none; }
+
+  #msg {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--green);
+    text-align: center;
+    min-height: 20px;
+  }
+
+  #action-btn {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+  #action-btn.show { display: inline-flex; }
+  #action-btn:active { transform: scale(0.96); opacity: 0.85; }
+
+  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.18)} 100%{transform:scale(1)} }
+  .pop { animation: pop 0.25s ease; }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="level-title">Niveau 1</div>
+  <div id="dots">
+    <div class="dot active" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
+  </div>
+</header>
+
+<div id="shelf-zone"></div>
+
+<div id="hand-zone">
+  <span class="hand-lbl">En main :</span>
+  <div id="held-display"></div>
+  <span id="held-none">— rien —</span>
+</div>
+
+<div id="tray-zone"></div>
+
+<div id="msg"></div>
+<button id="action-btn"></button>
+
+<script>
+const COLORS = {
+  rouge:  '#F52727',
+  bleu:   '#2798F5',
+  vert:   '#2EF527',
+  violet: '#7D27F5',
+  orange: '#F59827',
+  rose:   '#FF00EF'
+};
+
+const LEVELS = [
+  {
+    shelves: 1,
+    rangers: [
+      {name:'Bleu',   color:'bleu',   slots:2},
+      {name:'Rouge',  color:'rouge',  slots:2}
+    ]
+  },
+  {
+    shelves: 1,
+    rangers: [
+      {name:'Bleu',   color:'bleu',   slots:3},
+      {name:'Rouge',  color:'rouge',  slots:3},
+      {name:'Vert',   color:'vert',   slots:3}
+    ]
+  },
+  {
+    shelves: 2,
+    rangers: [
+      {name:'Bleu',   color:'bleu',   slots:3},
+      {name:'Rouge',  color:'rouge',  slots:3},
+      {name:'Vert',   color:'vert',   slots:3},
+      {name:'Violet', color:'violet', slots:3},
+      {name:'Orange', color:'orange', slots:3},
+      {name:'Rose',   color:'rose',   slots:3}
+    ]
+  }
+];
+
+let lvl = 0, held = null, grid = [], heldTrayEl = null;
+
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+
+function buildLevel(){
+  held = null; heldTrayEl = null;
+  const def = LEVELS[lvl];
+  grid = def.rangers.map(r => ({
+    name: r.name, color: r.color,
+    slots: Array(r.slots).fill(null)
+  }));
+  const balls = [];
+  def.rangers.forEach(r => { for(let i=0;i<r.slots;i++) balls.push(r.color); });
+  const sh = shuffle(balls);
+  const tray = document.getElementById('tray-zone');
+  tray.innerHTML = '';
+  sh.forEach((c,i) => {
+    const b = document.createElement('div');
+    b.className = 'tray-ball';
+    b.style.background = COLORS[c];
+    b.dataset.color = c;
+    b.addEventListener('click', onTrayClick);
+    tray.appendChild(b);
+  });
+  renderShelves();
+  document.getElementById('msg').textContent = '';
+  const btn = document.getElementById('action-btn');
+  btn.className = ''; btn.onclick = null;
+  updateDots();
+  document.getElementById('level-title').textContent = 'Niveau '+(lvl+1);
+}
+
+function renderShelves(){
+  const zone = document.getElementById('shelf-zone');
+  zone.innerHTML = '';
+  const def = LEVELS[lvl];
+  const perShelf = Math.ceil(grid.length / def.shelves);
+  for(let s=0;s<def.shelves;s++){
+    if(s>0){ const div=document.createElement('div'); div.className='shelf-divider'; zone.appendChild(div); }
+    const start = s*perShelf, end = Math.min(start+perShelf, grid.length);
+    for(let ri=start;ri<end;ri++){
+      const ranger = grid[ri];
+      const row = document.createElement('div');
+      row.className = 'ranger-row';
+      const lbl = document.createElement('div');
+      lbl.className = 'ranger-label';
+      lbl.textContent = ranger.name;
+      lbl.style.color = COLORS[ranger.color];
+      row.appendChild(lbl);
+      const slotsRow = document.createElement('div');
+      slotsRow.className = 'slots-row';
+      ranger.slots.forEach((ball,bi)=>{
+        const slot = document.createElement('div');
+        slot.className = 'slot'+(ball?' filled':'');
+        slot.dataset.ri = ri; slot.dataset.bi = bi;
+        if(ball){
+          const b=document.createElement('div');
+          b.className='ball';
+          b.style.background=COLORS[ball];
+          slot.appendChild(b);
+        }
+        slot.addEventListener('click', onSlotClick);
+        slotsRow.appendChild(slot);
+      });
+      row.appendChild(slotsRow);
+      zone.appendChild(row);
+    }
+  }
+  updateHeld();
+}
+
+function onTrayClick(e){
+  const el = e.currentTarget;
+  if(held !== null){ putBack(); }
+  held = {from:'tray', color: el.dataset.color};
+  heldTrayEl = el;
+  el.classList.add('picked');
+  updateHeld();
+}
+
+function onSlotClick(e){
+  const ri = +e.currentTarget.dataset.ri;
+  const bi = +e.currentTarget.dataset.bi;
+  const ball = grid[ri].slots[bi];
+
+  if(held === null){
+    if(!ball) return;
+    held = {from:'slot', color:ball, ri, bi};
+    grid[ri].slots[bi] = null;
+    renderShelves();
+    return;
+  }
+
+  if(ball){
+    const prev = held;
+    held = {from:'slot', color:ball, ri, bi};
+    if(heldTrayEl){ heldTrayEl.remove(); heldTrayEl=null; }
+    grid[ri].slots[bi] = prev.color;
+    renderShelves();
+    return;
+  }
+
+  grid[ri].slots[bi] = held.color;
+  if(heldTrayEl){ heldTrayEl.remove(); heldTrayEl=null; }
+  held = null;
+  renderShelves();
+  checkWin();
+}
+
+function putBack(){
+  if(!held) return;
+  if(held.from==='tray' && heldTrayEl){ heldTrayEl.classList.remove('picked'); heldTrayEl=null; }
+  else if(held.from==='slot'){
+    grid[held.ri].slots[held.bi] = held.color;
+    const b=document.createElement('div');
+    b.className='tray-ball';
+    b.style.background=COLORS[held.color];
+    b.dataset.color=held.color;
+    b.addEventListener('click',onTrayClick);
+    document.getElementById('tray-zone').appendChild(b);
+    renderShelves();
+  }
+  held=null; heldTrayEl=null;
+  updateHeld();
+}
+
+function updateHeld(){
+  const hd=document.getElementById('held-display');
+  const hn=document.getElementById('held-none');
+  if(held){
+    hd.style.background=COLORS[held.color];
+    hd.className='show';
+    hn.style.display='none';
+    hd.onclick=()=>putBack();
+  } else {
+    hd.className='';
+    hn.style.display='';
+    hd.onclick=null;
+  }
+}
+
+function checkWin(){
+  const ok = grid.every(r => r.slots.every(b=>b!==null) && r.slots.every(b=>b===r.color));
+  if(!ok) return;
+  const btn = document.getElementById('action-btn');
+  if(lvl<2){
+    document.getElementById('msg').textContent = ':)';
+    btn.innerHTML = 'Niveau suivant &#8594;';
+    btn.className='show';
+    btn.onclick=()=>{ lvl++; buildLevel(); };
+  } else {
+    document.getElementById('msg').textContent = 'Bonne chance pour la suite (ps: https://audioalter.com/spectrogram)';
+    btn.innerHTML = '&#8595; Télécharger l\'audio (Warning: Baisser le volume)';
+    btn.className='show';
+    btn.onclick=downloadAudio;
+  }
+}
+
+function updateDots(){
+  for(let i=0;i<3;i++){
+    document.getElementById('d'+i).className='dot'+(i<lvl?' done':i===lvl?' active':'');
+  }
+}
+
+function downloadAudio(){
+  const a = document.createElement('a');
+  a.href = 'BonneChance.wav';
+  a.download = 'BonneChance.wav';
+  a.click();
+}
+
+buildLevel();
+</script>
+</body>
+</html>
